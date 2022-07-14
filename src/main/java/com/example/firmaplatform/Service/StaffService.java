@@ -22,6 +22,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -70,7 +71,7 @@ public class StaffService implements UserDetailsService {
     public ApiResponse createManager(StaffDTO staffDTO){
         Optional<Staff> optionalStaff=staffRepository.findById(staffDTO.getStaffId());
         Optional<Roles> optionalRoles=roleRepository.findById(staffDTO.getTypeRole());
-        if (optionalStaff.isPresent() && optionalStaff.get().getEnabled()){
+        if (optionalStaff.isPresent() && optionalStaff.get().isType()){
             if (optionalStaff.get().getRoles().getRoleName().equals(RoleName.DIRECTOR) || optionalStaff.get().getRoles().getRoleName().equals(RoleName.MANAGER)){
                 Staff staff=new Staff();
                 staff.setFirstName(staffDTO.getFirstName());
@@ -99,8 +100,16 @@ public class StaffService implements UserDetailsService {
 
     public List<Staff> readStaff(GetStaffDTO getStaffDTO){
         Optional<Roles> optionalRoles=roleRepository.findById(getStaffDTO.getId());
-        if (optionalRoles.get().getRoleName().equals(RoleName.DIRECTOR) || optionalRoles.get().getRoleName().equals(RoleName.MANAGER)){
+        List<Staff> staffList1=staffRepository.findAll();
+        List<Staff> staffList=new ArrayList<>();
+        if (optionalRoles.get().getRoleName().equals(RoleName.DIRECTOR) ){
             return staffRepository.findAll();
+
+        } else if (optionalRoles.get().getRoleName().equals(RoleName.MANAGER)) {
+            for (Staff i:staffList1) {
+                if (i.getRoles().getRoleName().equals(RoleName.USER)) staffList.add(i);
+            }
+            return  staffList;
         }
         return null;
     }
@@ -108,7 +117,7 @@ public class StaffService implements UserDetailsService {
         Optional<Staff> byEmail = staffRepository.findByEmail(loginDTO.getLogin());
         if (byEmail.isPresent() && byEmail.get().getEnabled()){
             Staff staff=byEmail.get();
-            staff.setPassword(loginDTO.getPassword());
+            staff.setPassword(passwordEncoder.encode(loginDTO.getPassword()));
             staffRepository.save(staff);
             return new ApiResponse("Password successfully updated", true);
         }
